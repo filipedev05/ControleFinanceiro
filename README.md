@@ -1,6 +1,12 @@
 # Controle Financeiro
 
-Aplicação web em português para registrar receitas e despesas, organizar categorias e acompanhar o saldo e o resumo mensal.
+Aplicação web em português com receitas, despesas, categorias, saldo e resumo mensal. Usa Supabase Auth para cadastro/login/recuperação de senha e PostgreSQL com RLS para guardar os registros de cada conta.
+
+## Configurar
+
+Siga [SUPABASE.md](SUPABASE.md) para criar o banco, aplicar as políticas, configurar e-mails e preencher os valores **públicos** em `config.js`. Nunca coloque chaves administrativas no GitHub.
+
+A configuração é obrigatória: o site não salva novos registros sem conexão com o Supabase. Os dados da versão antiga permanecem no navegador e podem ser exportados e importados na conta.
 
 ## Executar
 
@@ -10,17 +16,7 @@ Requer Node.js 22 ou superior. Não há dependências externas.
 npm start
 ```
 
-Abra `http://localhost:3000` no seu computador. A porta pode ser definida com `PORT=8080 npm start`.
-
-## Funcionalidades
-
-- Cadastro e exclusão de receitas e despesas com data e categoria.
-- Saldo, receitas e despesas do mês selecionado.
-- Busca por descrição ou categoria e distribuição das despesas por categoria.
-- Persistência em localStorage e exportação/importação de backup JSON.
-- Layout responsivo e valores em reais, armazenados em centavos.
-
-Os dados ficam apenas no navegador e na origem utilizada (protocolo, domínio e porta). Não há conta, sincronização, servidor de dados ou integração bancária. Exporte backups regularmente; limpar os dados do navegador apaga os registros locais. A importação substitui os registros após confirmação. Use em dispositivo confiável.
+No Windows PowerShell, use `npm.cmd start` se `npm.ps1` estiver bloqueado. Abra `http://localhost:3000/`. Opcional: `PORT=8080 npm start` em shells compatíveis.
 
 ## Validar
 
@@ -29,8 +25,10 @@ npm test
 npm run check
 ```
 
-Verificação manual: adicione uma receita e uma despesa; confira saldo e categorias; mude o mês; pesquise; recarregue a página; exporte e reimporte o backup; exclua um registro. Os testes automatizados cobrem validação, conversão monetária e totais.
+Os testes do cliente usam respostas simuladas. A validação de login, envio de e-mails, persistência e isolamento de usuários em ambiente real exige um projeto Supabase configurado; veja o roteiro em SUPABASE.md.
 
-## Publicação
+## Publicar
 
-Sirva `index.html`, `style.css`, `app.js` e `finance.js` em uma hospedagem estática com HTTPS, ou execute o servidor Node. Nenhuma chave de API é necessária. O servidor de desenvolvimento não fornece autenticação ou armazenamento remoto.
+GitHub Pages é compatível: publique a branch `main`, pasta `/ (root)`. Sirva `index.html`, `style.css`, `app.js`, `finance.js`, `cloud.js` e `config.js`. Configure a URL HTTPS também nas URLs de autenticação do Supabase.
+
+Os registros financeiros ficam no banco, separados por usuário através de RLS. A sessão permanece apenas na memória da aba; ao recarregar, entre novamente. Consulte a seção de backups em SUPABASE.md antes de disponibilizar a aplicação para uso público.
