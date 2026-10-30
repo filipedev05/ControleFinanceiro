@@ -1,0 +1,1 @@
+{"name":"controle-financeiro","version":"1.0.0","private":true,"type":"module","scripts":{"start":"node server.js","test":"node --test","check":"node --check app.js && node --check finance.js && node --check server.js"},"engines":{"node":">=22"}}
