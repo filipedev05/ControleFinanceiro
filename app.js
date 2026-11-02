@@ -158,8 +158,10 @@ $('signup-form').onsubmit = event => {
     if (cloud.user) { showAccount(); await refresh(); }
     else {
       $('email').value = email;
-      showAuthScreen('login');
-      authMessage('Confira seu e-mail para confirmar o cadastro. Depois, entre na sua conta.');
+      showAuthScreen('login', false);
+      authMessage('Confirme sua conta pelo link recebido no e-mail antes de entrar.');
+      $('confirmation-email').textContent = email;
+      $('email-confirmation').showModal();
     }
   });
 };

@@ -3,3 +3,5 @@
 [hidden]{display:none!important}.auth-panel{max-width:520px;margin:10px auto 30px}.auth-panel h1{font-size:28px}.auth-panel p{font-size:14px}#account{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}#user-email{margin-right:auto;font-size:14px;overflow-wrap:anywhere}#cloud-status{font-size:13px}button:disabled{opacity:.5;cursor:wait}
 
 .auth-link{border:0;background:transparent;color:#216649;text-decoration:underline;padding:8px 4px;font-size:14px}.auth-link:hover{background:transparent;color:#174f3e}.auth-switch{text-align:center;border-top:1px solid #e0e8e1;padding-top:18px;margin-top:22px}.auth-panel .password-hint{font-size:12px;margin:-10px 0 18px}
+
+#email-confirmation{width:calc(100% - 32px);max-width:480px;border:1px solid #e0e8e1;border-radius:14px;padding:26px;color:#233a32}#email-confirmation::backdrop{background:rgb(20 40 30 / 55%)}#email-confirmation p{font-size:14px}#confirmation-email{overflow-wrap:anywhere}

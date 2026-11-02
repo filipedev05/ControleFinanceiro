@@ -30,6 +30,12 @@
 <form id="password-form" hidden><h1>Redefina sua senha</h1><label>Nova senha<input id="new-password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary">Salvar nova senha</button></form>
 <p id="auth-message" role="status" aria-live="polite"></p>
 </section>
+<dialog id="email-confirmation" aria-labelledby="confirmation-title" aria-describedby="confirmation-description">
+<h2 id="confirmation-title">Confirme sua conta pelo e-mail</h2>
+<p id="confirmation-description">Antes de entrar na plataforma, abra o e-mail de confirmação em <strong id="confirmation-email"></strong> e clique no link para ativar sua conta.</p>
+<p>Não encontrou a mensagem? Confira também a pasta de spam ou lixo eletrônico.</p>
+<form method="dialog"><button class="primary" autofocus>Entendi</button></form>
+</dialog>
 <div id="account" hidden><span id="user-email"></span><button id="reload" type="button">Atualizar registros</button><button id="logout" type="button">Sair</button></div>
 <p id="cloud-status" role="status" aria-live="polite"></p>
 <div id="dashboard" hidden>
