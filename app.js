@@ -1,4 +1,4 @@
-import {categories, validateEntry, summarize, parseAmount, categoryTotals, monthlyEvolution} from './finance.js';
+import {categories, entryCategories, validateEntry, summarize, parseAmount, categoryTotals, monthlyEvolution} from './finance.js';
 const $ = id => document.getElementById(id);
 import {createCloud} from './cloud.js';
 import {supabaseConfig} from './config.js';
@@ -13,7 +13,15 @@ const today = new Date();
 const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 $('month').value = localDate.slice(0,7);
 $('entry-form').elements.date.value = localDate;
-for (const c of categories) $('category').add(new Option(c,c));
+function updateCategoryOptions(currentCategory = '') {
+  const select = $('category');
+  const previous = select.value;
+  select.replaceChildren(...entryCategories($('entry-form').elements.type.value, currentCategory).map(c => new Option(c,c)));
+  if ([...select.options].some(option => option.value === previous)) select.value = previous;
+  if (currentCategory) select.value = currentCategory;
+}
+$('entry-form').elements.type.onchange = () => updateCategoryOptions();
+updateCategoryOptions();
 function notify(text) { $('message').textContent = text; }
 function load(data) {
   if (!Array.isArray(data) || data.length > 10000) throw new Error('Backup inválido (limite de 10.000 registros).');
@@ -91,7 +99,8 @@ function render() {
       if (busy) return;
       editingId = e.id;
       const form = $('entry-form');
-      for (const key of ['type','description','category','date']) form.elements[key].value = e[key];
+      for (const key of ['type','description','date']) form.elements[key].value = e[key];
+      updateCategoryOptions(e.category);
       form.elements.amount.value = (e.amount / 100).toFixed(2).replace('.', ',');
       $('entry-title').textContent = 'Editar movimentação';
       $('save-entry').textContent = 'Salvar alterações';
@@ -107,6 +116,7 @@ function render() {
 function resetEntryForm() {
   editingId = null;
   $('entry-form').reset();
+  updateCategoryOptions();
   $('entry-form').elements.date.value = localDate;
   $('entry-title').textContent = 'Nova movimentação';
   $('save-entry').textContent = '+ Adicionar movimentação';
@@ -137,7 +147,8 @@ function renderCharts(monthly) {
     const svg = svgElement('svg', {viewBox:'0 0 240 240', role:'img', 'aria-label':`${typeLabel} por categoria. Valores e percentuais na legenda abaixo.`});
     let angle = -Math.PI / 2;
     groups.forEach((g, i) => {
-      const color = chartColors[categories.indexOf(g.category)];
+      const colorIndex = categories.indexOf(g.category);
+      const color = chartColors[colorIndex] || `hsl(${(colorIndex * 137.508) % 360} 52% 38%)`;
       const next = angle + g.amount / total * Math.PI * 2;
       const shape = groups.length === 1 ? svgElement('circle', {cx:120,cy:120,r:106,fill:color}) : svgElement('path', {d:`M120 120 L${120+106*Math.cos(angle)} ${120+106*Math.sin(angle)} A106 106 0 ${next-angle > Math.PI ? 1 : 0} 1 ${120+106*Math.cos(next)} ${120+106*Math.sin(next)} Z`,fill:color,stroke:'#fff','stroke-width':2});
       const percentage = (g.amount / total * 100).toLocaleString('pt-BR', {maximumFractionDigits:1});

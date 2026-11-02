@@ -6,10 +6,13 @@ create table if not exists public.entries (
   description text not null check (char_length(btrim(description)) between 1 and 120),
   type text not null check (type in ('income','expense')),
   amount bigint not null check (amount > 0 and amount <= 9007199254740991),
-  category text not null check (category in ('Alimentação','Moradia','Transporte','Saúde','Lazer','Salário','Investimentos','Outros')),
+  category text not null check (category in ('Alimentação','Moradia','Transporte','Saúde','Lazer','Salário','Investimentos','Outros','Supermercado','Restaurantes e delivery','Combustível','Manutenção do veículo','Educação','Assinaturas e serviços','Contas da casa','Compras pessoais','Pets','Viagens','Impostos e taxas','Dívidas e empréstimos','Renda extra','Freelance','Comissões','Vendas','Aluguéis recebidos','Rendimentos','Benefícios','Presentes recebidos')),
   date date not null check (date between date '0001-01-01' and date '9999-12-31'),
   created_at timestamptz not null default now()
 );
+alter table public.entries drop constraint if exists entries_category_check;
+alter table public.entries add constraint entries_category_check
+check (category in ('Alimentação','Moradia','Transporte','Saúde','Lazer','Salário','Investimentos','Outros','Supermercado','Restaurantes e delivery','Combustível','Manutenção do veículo','Educação','Assinaturas e serviços','Contas da casa','Compras pessoais','Pets','Viagens','Impostos e taxas','Dívidas e empréstimos','Renda extra','Freelance','Comissões','Vendas','Aluguéis recebidos','Rendimentos','Benefícios','Presentes recebidos'));
 create index if not exists entries_user_date_idx on public.entries(user_id,date);
 alter table public.entries enable row level security;
 alter table public.entries force row level security;

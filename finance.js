@@ -1,4 +1,11 @@
-export const categories = ['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Lazer', 'Salário', 'Investimentos', 'Outros'];
+export const categoriesByType = {"expense": ["Alimentação", "Moradia", "Transporte", "Saúde", "Lazer", "Supermercado", "Restaurantes e delivery", "Combustível", "Manutenção do veículo", "Educação", "Assinaturas e serviços", "Contas da casa", "Compras pessoais", "Pets", "Viagens", "Impostos e taxas", "Dívidas e empréstimos", "Investimentos", "Outros"], "income": ["Salário", "Renda extra", "Freelance", "Comissões", "Vendas", "Aluguéis recebidos", "Rendimentos", "Benefícios", "Presentes recebidos", "Investimentos", "Outros"]};
+export const categories = ["Alimentação", "Moradia", "Transporte", "Saúde", "Lazer", "Salário", "Investimentos", "Outros", "Supermercado", "Restaurantes e delivery", "Combustível", "Manutenção do veículo", "Educação", "Assinaturas e serviços", "Contas da casa", "Compras pessoais", "Pets", "Viagens", "Impostos e taxas", "Dívidas e empréstimos", "Renda extra", "Freelance", "Comissões", "Vendas", "Aluguéis recebidos", "Rendimentos", "Benefícios", "Presentes recebidos"];
+export function entryCategories(type, currentCategory = '') {
+  const options = [...(categoriesByType[type] || [])];
+  // Mantém a categoria original ao editar lançamentos anteriores à separação por tipo.
+  if (categories.includes(currentCategory) && !options.includes(currentCategory)) options.push(currentCategory);
+  return options;
+}
 export function validateEntry(entry) {
   if (!entry.description?.trim() || entry.description.trim().length > 120) throw new Error('Informe uma descrição de até 120 caracteres.');
   if (!['income', 'expense'].includes(entry.type)) throw new Error('Tipo inválido.');

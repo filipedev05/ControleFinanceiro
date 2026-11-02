@@ -70,3 +70,7 @@ O código inclui cadastro e recuperação de senha, mas não implementa exclusã
 ## Habilitar edição em um projeto existente
 
 Execute `supabase/enable-editing.sql` no SQL Editor do seu projeto. A política limita a atualização aos registros da própria conta. O gráfico usa os lançamentos existentes e não precisa de alterações no banco.
+
+## Novas categorias
+
+Em projetos existentes, execute `supabase/expand-categories.sql` no SQL Editor para liberar as novas categorias. Não altera os lançamentos existentes. O formulário separa receitas e despesas; ao editar um lançamento antigo, sua categoria original continua disponível.

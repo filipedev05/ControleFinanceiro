@@ -35,3 +35,19 @@ test('evolução inclui 12 meses, atravessa o ano e preenche meses vazios',async
  assert.equal(rows.at(-1).expense,12990);
  assert.deepEqual(monthlyEvolution([],''),[]);
 });
+test('categorias seguem o tipo e preservam categoria antiga na edição',async()=>{
+ const {entryCategories,categories}=await import('../finance.js');
+ assert.ok(entryCategories('expense').includes('Combustível'));
+ assert.ok(!entryCategories('expense').includes('Renda extra'));
+ assert.ok(entryCategories('income').includes('Renda extra'));
+ assert.ok(!entryCategories('income').includes('Combustível'));
+ assert.ok(entryCategories('income','Alimentação').includes('Alimentação'));
+ assert.ok(!entryCategories('income','inválida').includes('inválida'));
+ assert.equal(new Set(categories).size,categories.length);
+ for(const category of categories) assert.equal(validateEntry({...entry,category}).category,category);
+});
+test('pizza inclui novas categorias e mantém os valores antigos',async()=>{
+ const {categoryTotals}=await import('../finance.js');
+ assert.deepEqual(categoryTotals([entry,{...entry,category:'Combustível',amount:5000}], 'expense'),[{category:'Alimentação',amount:12990},{category:'Combustível',amount:5000}]);
+ assert.deepEqual(categoryTotals([{...entry,type:'income',category:'Renda extra',amount:7000}], 'income'),[{category:'Renda extra',amount:7000}]);
+});
