@@ -80,3 +80,28 @@ test('link de recuperação confirma o usuário antes de trocar senha',async()=>
  assert.equal(calls[1].options.headers.Authorization,'Bearer link-token');
  assert.equal(JSON.parse(calls[1].options.body).password,'new-password');
 });
+test('edição exige sessão, filtra o dono e envia somente campos editáveis',async()=>{
+ const calls=[];
+ const entry={id:'entry-1',description:'Mercado corrigido',type:'expense',amount:2500,category:'Alimentação',date:'2026-11-02',user_id:'user-b'};
+ const cloud=createCloud(config,async(url,options)=>{calls.push({url,options});return reply(url.includes('/token')?session:[entry]);});
+ await assert.rejects(cloud.update(entry),/Entre/);
+ assert.equal(calls.length,0);
+ await cloud.login('a','b');
+ assert.equal((await cloud.update(entry)).amount,2500);
+ const {url,options}=calls[1];
+ assert.ok(url.includes('id=eq.entry-1&user_id=eq.user-a'));
+ assert.equal(options.method,'PATCH');
+ assert.equal(options.headers.Authorization,'Bearer access');
+ assert.equal(options.headers.Prefer,'return=representation');
+ const body=JSON.parse(options.body);
+ assert.equal(body.amount,2500);
+ assert.equal(body.user_id,undefined);
+ assert.equal(body.id,undefined);
+});
+test('edição não informa sucesso para registro ausente ou erro de permissão',async()=>{
+ for(const status of [200,403]){
+  const cloud=createCloud(config,async(url)=>url.includes('/token')?reply(session):reply([],status));
+  await cloud.login('a','b');
+  await assert.rejects(cloud.update({id:'missing'}),status===200?/não encontrado/:/Não foi possível/);
+ }
+});

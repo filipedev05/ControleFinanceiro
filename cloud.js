@@ -85,6 +85,13 @@ export function createCloud(config, request = fetch) {
       const user = requireUser();
       return call('/rest/v1/entries',{method:'POST',authenticated:true,headers:{Prefer:'return=representation'},body:entries.map(e=>({...fields(e),user_id:user}))});
     },
+    async update(entry) {
+      const user = requireUser();
+      const {id, ...changes} = fields(entry);
+      const updated = await call(`/rest/v1/entries?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user)}`,{method:'PATCH',authenticated:true,headers:{Prefer:'return=representation'},body:changes});
+      if (!Array.isArray(updated) || updated.length !== 1) throw new Error('Registro não encontrado. Atualize a lista.');
+      return updated[0];
+    },
     async remove(id) {
       const user = requireUser();
       const removed = await call(`/rest/v1/entries?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user)}`,{method:'DELETE',authenticated:true,headers:{Prefer:'return=representation'}});

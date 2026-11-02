@@ -15,11 +15,14 @@ alter table public.entries enable row level security;
 alter table public.entries force row level security;
 revoke all on public.entries from anon;
 revoke all on public.entries from authenticated;
-grant select, insert, delete on public.entries to authenticated;
+grant select, insert, update, delete on public.entries to authenticated;
 drop policy if exists entries_read_own on public.entries;
 create policy entries_read_own on public.entries for select to authenticated using ((select auth.uid()) = user_id);
 drop policy if exists entries_insert_own on public.entries;
 create policy entries_insert_own on public.entries for insert to authenticated with check ((select auth.uid()) = user_id);
 drop policy if exists entries_delete_own on public.entries;
 create policy entries_delete_own on public.entries for delete to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists entries_update_own on public.entries;
+create policy entries_update_own on public.entries for update to authenticated
+using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 commit;

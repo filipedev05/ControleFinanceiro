@@ -16,3 +16,17 @@ export function parseAmount(value) {
   if (!/^\d+(?:[.,]\d{1,2})?$/.test(value.trim())) throw new Error('Use um valor como 125,50, sem separador de milhar.');
   return Math.round(Number(value.replace(',', '.')) * 100);
 }
+
+export function categoryTotals(entries, type) {
+  return categories.map(category => ({category, amount: entries.filter(e => e.type === type && e.category === category).reduce((sum, e) => sum + e.amount, 0)})).filter(e => e.amount > 0);
+}
+export function monthlyEvolution(entries, endMonth) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(endMonth)) return [];
+  const [year, month] = endMonth.split('-').map(Number);
+  const end = year * 12 + month - 1;
+  return Array.from({length:12}, (_, i) => {
+    const index = end - 11 + i;
+    const key = `${String(Math.floor(index / 12)).padStart(4,'0')}-${String(index % 12 + 1).padStart(2,'0')}`;
+    return {month:key, ...summarize(entries.filter(e => e.date.startsWith(key)))};
+  });
+}

@@ -1,4 +1,4 @@
-import {categories, validateEntry, summarize, parseAmount} from './finance.js';
+import {categories, validateEntry, summarize, parseAmount, categoryTotals, monthlyEvolution} from './finance.js';
 const $ = id => document.getElementById(id);
 import {createCloud} from './cloud.js';
 import {supabaseConfig} from './config.js';
@@ -6,6 +6,8 @@ let cloud;
 let busy = false;
 let ready = false;
 let entries = [];
+let editingId = null;
+let chartType = 'expense';
 const money = value => (value / 100).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 const today = new Date();
 const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
@@ -63,7 +65,7 @@ async function action(task) {
   catch (error) {
     cloudMessage(error.message);
     authMessage(error.message);
-    if (!cloud?.user) { entries = []; ready = false; render(); showAccount(); }
+    if (!cloud?.user) { resetEntryForm(); entries = []; ready = false; render(); showAccount(); }
   } finally { busy = false; controls.forEach(c => c.disabled = false); }
 }
 function render() {
@@ -83,32 +85,113 @@ function render() {
     info.append(title,detail);
     const amount = document.createElement('strong'); amount.className = e.type === 'income' ? 'positive' : 'negative'; amount.textContent = `${e.type === 'income' ? '+' : '−'} ${money(e.amount)}`;
     const remove = document.createElement('button'); remove.className='delete'; remove.textContent='×'; remove.setAttribute('aria-label',`Excluir ${e.description}`);
-    remove.onclick = () => { if (confirm(`Excluir “${e.description}”?`)) action(async () => { await cloud.remove(e.id); entries = entries.filter(item => item.id !== e.id); render(); cloudMessage('Registro excluído.'); }); };
-    row.append(info,amount,remove); $('entries').append(row);
+    remove.onclick = () => { if (confirm(`Excluir “${e.description}”?`)) action(async () => { await cloud.remove(e.id); entries = entries.filter(item => item.id !== e.id); if (editingId === e.id) resetEntryForm(); render(); cloudMessage('Registro excluído.'); }); };
+    const edit = document.createElement('button'); edit.type='button'; edit.textContent='Editar'; edit.className='edit-entry'; edit.setAttribute('aria-label',`Editar ${e.description}`);
+    edit.onclick = () => {
+      if (busy) return;
+      editingId = e.id;
+      const form = $('entry-form');
+      for (const key of ['type','description','category','date']) form.elements[key].value = e[key];
+      form.elements.amount.value = (e.amount / 100).toFixed(2).replace('.', ',');
+      $('entry-title').textContent = 'Editar movimentação';
+      $('save-entry').textContent = 'Salvar alterações';
+      $('cancel-edit').hidden = false;
+      notify('Altere os campos e clique em Salvar alterações.');
+      form.scrollIntoView({behavior:'smooth', block:'center'});
+      form.elements.description.focus({preventScroll:true});
+    };
+    row.append(info,amount,edit,remove); $('entries').append(row);
   }
+  renderCharts(monthly);
+}
+function resetEntryForm() {
+  editingId = null;
+  $('entry-form').reset();
+  $('entry-form').elements.date.value = localDate;
+  $('entry-title').textContent = 'Nova movimentação';
+  $('save-entry').textContent = '+ Adicionar movimentação';
+  $('cancel-edit').hidden = true;
+  notify('');
+}
+$('cancel-edit').onclick = resetEntryForm;
+$('chart-expense').onclick = () => { chartType = 'expense'; render(); };
+$('chart-income').onclick = () => { chartType = 'income'; render(); };
+const chartColors = ['#216649','#427eb0','#ba7130','#805bb0','#b94f6d','#25818c','#7b7b29','#617586'];
+function svgElement(name, attributes = {}, text) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+  for (const [key, value] of Object.entries(attributes)) el.setAttribute(key, value);
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+function renderCharts(monthly) {
+  const groups = categoryTotals(monthly, chartType);
+  const total = groups.reduce((sum, g) => sum + g.amount, 0);
+  const typeLabel = chartType === 'expense' ? 'Despesas' : 'Receitas';
+  $('chart-expense').setAttribute('aria-pressed', String(chartType === 'expense'));
+  $('chart-income').setAttribute('aria-pressed', String(chartType === 'income'));
+  $('distribution-caption').textContent = `${typeLabel} de ${$('month').value.split('-').reverse().join('/')} · Total: ${money(total)}`;
+  $('pie-chart').replaceChildren();
   $('breakdown').replaceChildren();
-  for (const c of categories) {
-    const value = monthly.filter(e => e.type === 'expense' && e.category === c).reduce((s,e) => s+e.amount,0);
-    if (!value) continue;
-    const row = document.createElement('div'); row.className='category-row';
-    const label = document.createElement('span'); label.textContent=c;
-    const progress = document.createElement('progress'); progress.max=totals.expense; progress.value=value; progress.setAttribute('aria-label',c);
-    const amount = document.createElement('strong'); amount.textContent=money(value);
-    row.append(label,progress,amount); $('breakdown').append(row);
+  if (!total) $('breakdown').textContent = `Nenhuma ${chartType === 'expense' ? 'despesa' : 'receita'} neste período.`;
+  else {
+    const svg = svgElement('svg', {viewBox:'0 0 240 240', role:'img', 'aria-label':`${typeLabel} por categoria. Valores e percentuais na legenda abaixo.`});
+    let angle = -Math.PI / 2;
+    groups.forEach((g, i) => {
+      const color = chartColors[categories.indexOf(g.category)];
+      const next = angle + g.amount / total * Math.PI * 2;
+      const shape = groups.length === 1 ? svgElement('circle', {cx:120,cy:120,r:106,fill:color}) : svgElement('path', {d:`M120 120 L${120+106*Math.cos(angle)} ${120+106*Math.sin(angle)} A106 106 0 ${next-angle > Math.PI ? 1 : 0} 1 ${120+106*Math.cos(next)} ${120+106*Math.sin(next)} Z`,fill:color,stroke:'#fff','stroke-width':2});
+      const percentage = (g.amount / total * 100).toLocaleString('pt-BR', {maximumFractionDigits:1});
+      shape.append(svgElement('title', {}, `${g.category}: ${money(g.amount)} (${percentage}%)`));
+      svg.append(shape); angle = next;
+      const row = document.createElement('div'); row.className='pie-legend-row';
+      const dot = document.createElement('span'); dot.className='legend-dot'; dot.style.backgroundColor=color;
+      const label = document.createElement('span'); label.textContent=g.category;
+      const value = document.createElement('strong'); value.textContent=`${money(g.amount)} · ${percentage}%`;
+      row.append(dot,label,value); $('breakdown').append(row);
+    });
+    $('pie-chart').append(svg);
   }
-  if (!totals.expense) $('breakdown').textContent='Nenhuma despesa neste período.';
+  const months = monthlyEvolution(entries, $('month').value);
+  const max = Math.max(1, ...months.flatMap(m => [m.income,m.expense]));
+  const svg = svgElement('svg', {viewBox:'0 0 720 300', role:'img', 'aria-label':'Evolução mensal de receitas e despesas. Valores disponíveis na tabela abaixo.'});
+  for (let i=0; i<=4; i++) {
+    const y=245-i*52;
+    svg.append(svgElement('line',{x1:92,y1:y,x2:705,y2:y,stroke:'#e0e8e1'}));
+    svg.append(svgElement('text',{x:84,y:y+4,'text-anchor':'end','font-size':11,fill:'#54675c'}, money(Math.round(max*i/4))));
+  }
+  $('evolution-table').replaceChildren();
+  months.forEach((m,i) => {
+    const x=100+i*50;
+    const label=m.month.slice(5)+'/'+m.month.slice(2,4);
+    for (const [type, offset, color] of [['income',0,'#217750'],['expense',18,'#bd5a4b']]) {
+      const height=m[type]/max*208;
+      const bar=svgElement('rect',{x:x+offset,y:245-height,width:15,height,fill:color,rx:2});
+      bar.append(svgElement('title',{},`${label} · ${type==='income'?'Receitas':'Despesas'}: ${money(m[type])}`)); svg.append(bar);
+    }
+    svg.append(svgElement('text',{x:x+15,y:267,'text-anchor':'middle','font-size':11,fill:'#54675c'},label));
+    const row=document.createElement('tr');
+    for (const value of [label,money(m.income),money(m.expense)]) { const cell=document.createElement('td'); cell.textContent=value; row.append(cell); }
+    $('evolution-table').append(row);
+  });
+  $('evolution-chart').replaceChildren(svg);
 }
 $('entry-form').onsubmit = event => {
   event.preventDefault();
   const form = event.currentTarget;
   action(async () => {
     if (!ready) throw new Error('Atualize os registros antes de adicionar movimentações.');
-    const e = validateEntry({id:crypto.randomUUID(),type:form.elements.type.value,description:form.elements.description.value,amount:parseAmount(form.elements.amount.value),date:form.elements.date.value,category:form.elements.category.value});
-    const added = await cloud.insert([e]);
-    entries.push(...added.map(validateEntry));
+    const e = validateEntry({id:editingId || crypto.randomUUID(),type:form.elements.type.value,description:form.elements.description.value,amount:parseAmount(form.elements.amount.value),date:form.elements.date.value,category:form.elements.category.value});
+    const editing = Boolean(editingId);
+    if (editing) {
+      const updated = validateEntry(await cloud.update(e));
+      entries = entries.map(item => item.id === updated.id ? updated : item);
+    } else {
+      const added = await cloud.insert([e]);
+      entries.push(...added.map(validateEntry));
+    }
     $('month').value = e.date.slice(0,7);
-    form.elements.description.value = ''; form.elements.amount.value = '';
-    render(); notify('Movimentação salva na sua conta.');
+    resetEntryForm();
+    render(); notify(editing ? 'Alterações salvas na sua conta.' : 'Movimentação salva na sua conta.');
   });
 };
 $('month').onchange = render; $('search').oninput = render;
@@ -179,7 +262,7 @@ $('password-form').onsubmit = event => {
 };
 $('logout').onclick = () => action(async () => {
   try { await cloud.logout(); }
-  finally { entries=[]; ready=false; render(); showAuthScreen('login'); showAccount(); notify(''); cloudMessage('Você saiu. Entre novamente para acessar os dados.'); }
+  finally { resetEntryForm(); entries=[]; ready=false; render(); showAuthScreen('login'); showAccount(); notify(''); cloudMessage('Você saiu. Entre novamente para acessar os dados.'); }
 });
 $('reload').onclick = () => action(refresh);
 render();

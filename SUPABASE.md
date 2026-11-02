@@ -66,3 +66,7 @@ O código inclui cadastro e recuperação de senha, mas não implementa exclusã
 ## Verificações automatizadas
 
 `npm test` testa cálculos e o cliente REST com respostas simuladas (autenticação, renovação de token, paginação, dono das linhas, erros e logout). `npm run check` verifica a sintaxe. Esses testes não substituem a execução do SQL nem os testes de duas contas no seu Supabase real.
+
+## Habilitar edição em um projeto existente
+
+Execute `supabase/enable-editing.sql` no SQL Editor do seu projeto. A política limita a atualização aos registros da própria conta. O gráfico usa os lançamentos existentes e não precisa de alterações no banco.

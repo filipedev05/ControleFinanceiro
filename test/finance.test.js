@@ -16,3 +16,22 @@ test('calcula receitas, despesas e saldo inclusive negativo',()=>{
  assert.deepEqual(summarize([{type:'income',amount:10000},entry]),{income:10000,expense:12990,balance:-2990});
  assert.deepEqual(summarize([]),{income:0,expense:0,balance:0});
 });
+test('pizza separa categorias por tipo e ignora categorias zeradas',async()=>{
+ const {categoryTotals}=await import('../finance.js');
+ const data=[entry,{...entry,amount:10},{...entry,type:'income',category:'Salário',amount:50000}];
+ assert.deepEqual(categoryTotals(data,'expense'),[{category:'Alimentação',amount:13000}]);
+ assert.deepEqual(categoryTotals(data,'income'),[{category:'Salário',amount:50000}]);
+ assert.deepEqual(categoryTotals([],'expense'),[]);
+});
+test('evolução inclui 12 meses, atravessa o ano e preenche meses vazios',async()=>{
+ const {monthlyEvolution}=await import('../finance.js');
+ const rows=monthlyEvolution([entry,{...entry,type:'income',date:'2025-12-01',amount:100},{...entry,date:'2025-10-31'},{...entry,date:'2026-11-01'}],'2026-10');
+ assert.equal(rows.length,12);
+ assert.equal(rows[0].month,'2025-11');
+ assert.equal(rows[1].income,100);
+ assert.equal(rows[1].expense,0);
+ assert.equal(rows[2].balance,0);
+ assert.equal(rows.at(-1).month,'2026-10');
+ assert.equal(rows.at(-1).expense,12990);
+ assert.deepEqual(monthlyEvolution([],''),[]);
+});
