@@ -25,6 +25,18 @@ function load(data) {
 }
 function cloudMessage(text) { $('cloud-status').textContent = text; }
 function authMessage(text) { $('auth-message').textContent = text; }
+function showAuthScreen(screen, focus = true) {
+  $('login-screen').hidden = screen !== 'login';
+  $('signup-screen').hidden = screen !== 'signup';
+  $('password-form').hidden = screen !== 'recovery';
+  $('password').value = '';
+  $('signup-password').value = '';
+  authMessage('');
+  cloudMessage('');
+  if (focus) $(screen === 'signup' ? 'signup-email' : screen === 'recovery' ? 'new-password' : 'email').focus();
+}
+$('show-signup').onclick = () => showAuthScreen('signup');
+$('show-login').onclick = () => showAuthScreen('login');
 function showAccount() {
   const logged = Boolean(cloud?.user);
   $('auth-panel').hidden = logged;
@@ -137,13 +149,18 @@ $('auth-form').onsubmit = event => {
   event.preventDefault();
   action(async () => { await cloud.login($('email').value.trim(),$('password').value); $('password').value=''; showAccount(); await refresh(); });
 };
-$('signup').onclick = () => {
-  if (!$('auth-form').reportValidity()) return;
+$('signup-form').onsubmit = event => {
+  event.preventDefault();
   action(async () => {
-    await cloud.signup($('email').value.trim(),$('password').value,redirect);
-    $('password').value='';
+    const email = $('signup-email').value.trim();
+    await cloud.signup(email,$('signup-password').value,redirect);
+    $('signup-password').value='';
     if (cloud.user) { showAccount(); await refresh(); }
-    else authMessage('Confira seu e-mail para confirmar o cadastro. Se já tiver conta, entre ou recupere sua senha.');
+    else {
+      $('email').value = email;
+      showAuthScreen('login');
+      authMessage('Confira seu e-mail para confirmar o cadastro. Depois, entre na sua conta.');
+    }
   });
 };
 $('recover').onclick = () => {
@@ -154,13 +171,13 @@ $('password-form').onsubmit = event => {
   event.preventDefault();
   action(async () => {
     await cloud.updatePassword($('new-password').value); $('new-password').value='';
-    $('password-form').hidden=true; $('auth-form').hidden=false;
+    showAuthScreen('login', false);
     showAccount(); await refresh();
   });
 };
 $('logout').onclick = () => action(async () => {
   try { await cloud.logout(); }
-  finally { entries=[]; ready=false; render(); showAccount(); notify(''); cloudMessage('Você saiu. Entre novamente para acessar os dados.'); }
+  finally { entries=[]; ready=false; render(); showAuthScreen('login'); showAccount(); notify(''); cloudMessage('Você saiu. Entre novamente para acessar os dados.'); }
 });
 $('reload').onclick = () => action(refresh);
 render();
@@ -173,10 +190,10 @@ action(async () => {
     if (new URLSearchParams(hash.slice(1)).has('error')) throw new Error('Link inválido ou expirado. Solicite outro.');
     await cloud.acceptLink(hash);
     if (new URLSearchParams(hash.slice(1)).get('type') === 'recovery') {
-      $('auth-form').hidden=true; $('password-form').hidden=false;
+      showAuthScreen('recovery');
       authMessage('Escolha uma nova senha para sua conta.');
       return;
     }
     showAccount(); await refresh();
-  } else authMessage('Entre ou crie uma conta. Por segurança, esta aba não guarda sua senha nem a sessão ao recarregar.');
+  } else showAuthScreen('login', false);
 });

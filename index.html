@@ -5,15 +5,29 @@
 <header><a class="brand" href="./"><span class="logo">$</span> Controle<span>Financeiro</span></a><span class="badge">Suas finanças, com clareza</span></header>
 <main>
 <section id="auth-panel" class="panel auth-panel">
-<h1>Suas finanças, em qualquer lugar</h1>
-<p>Entre na sua conta para acessar seus registros com segurança.</p>
+<div id="login-screen">
+<h1>Entre na sua conta</h1>
+<p>Acesse seus registros e continue cuidando das suas finanças.</p>
 <form id="auth-form">
 <label>E-mail<input id="email" type="email" autocomplete="username" required maxlength="254"></label>
 <label>Senha<input id="password" type="password" autocomplete="current-password" minlength="8" required></label>
 <button class="primary" type="submit">Entrar</button>
-<div class="backup"><button id="signup" type="button">Criar conta</button><button id="recover" type="button">Esqueci a senha</button></div>
+<button id="recover" class="auth-link" type="button">Esqueci a senha</button>
 </form>
-<form id="password-form" hidden><label>Nova senha<input id="new-password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary">Salvar nova senha</button></form>
+<p class="auth-switch">Ainda não tem conta? <button id="show-signup" class="auth-link" type="button">Criar conta</button></p>
+</div>
+<div id="signup-screen" hidden>
+<h1>Crie sua conta</h1>
+<p>Comece a organizar suas finanças com uma conta só sua.</p>
+<form id="signup-form">
+<label>E-mail<input id="signup-email" type="email" autocomplete="username" required maxlength="254"></label>
+<label>Senha<input id="signup-password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="signup-password-hint"></label>
+<p id="signup-password-hint" class="password-hint">Use pelo menos 8 caracteres.</p>
+<button class="primary" type="submit">Criar conta</button>
+</form>
+<p class="auth-switch">Já tem conta? <button id="show-login" class="auth-link" type="button">Entrar</button></p>
+</div>
+<form id="password-form" hidden><h1>Redefina sua senha</h1><label>Nova senha<input id="new-password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary">Salvar nova senha</button></form>
 <p id="auth-message" role="status" aria-live="polite"></p>
 </section>
 <div id="account" hidden><span id="user-email"></span><button id="reload" type="button">Atualizar registros</button><button id="logout" type="button">Sair</button></div>
