@@ -80,3 +80,11 @@ Em projetos existentes, execute `supabase/expand-categories.sql` no SQL Editor p
 Em **Authentication → URL Configuration**, defina **Site URL** como `https://filipedev05.github.io/ControleFinanceiro/` e inclua esse mesmo endereço em **Redirect URLs**. Salve as alterações. O código usa `authRedirectUrl` de `config.js` para o cadastro e a recuperação. Após confirmar o cadastro, a página mostra o login, sem abrir automaticamente os registros.
 
 Em **Authentication → Email Templates → Confirm signup**, se o modelo tiver sido personalizado, o link de confirmação deve usar `{{ .ConfirmationURL }}`. Um link fixo para localhost no modelo também precisa ser corrigido. Não substitua pelo endereço direto do site, pois isso não confirma a conta. Links já enviados podem conter o destino antigo; valide o fluxo com um novo e-mail de confirmação.
+
+## Limite de tentativas e recuperação
+
+Após três respostas `invalid_credentials`, a interface pausa o login por 15 minutos neste navegador. O estado persiste ao recarregar e é compartilhado entre abas. Falhas de rede, e-mail não confirmado e limites do Supabase não contam como senha incorreta. Login bem-sucedido ou redefinição de senha nessa aba limpa a contagem. A recuperação continua disponível.
+
+Este limite local pode ser contornado ao limpar os dados ou trocar de navegador e não bloqueia chamadas diretas à API. Um limite global exato de três erros por conta exige uma solução no servidor de autenticação; não é fornecido por esse contador. As proteções de rate limit do Supabase continuam independentes.
+
+O formulário de recuperação envia o link pelo Supabase ao endereço público configurado. Abra o link para escolher a nova senha; ao salvar, volte ao login. Verifique URL Configuration e o modelo Reset Password se os e-mails não retornarem ao site correto.

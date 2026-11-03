@@ -11,7 +11,8 @@
 <form id="auth-form">
 <label>E-mail<input id="email" type="email" autocomplete="username" required maxlength="254"></label>
 <label>Senha<input id="password" type="password" autocomplete="current-password" minlength="8" required></label>
-<button class="primary" type="submit">Entrar</button>
+<button id="login-submit" class="primary" type="submit">Entrar</button>
+<p id="login-limit-message" role="status" aria-live="polite"></p>
 <button id="recover" class="auth-link" type="button">Esqueci a senha</button>
 </form>
 <p class="auth-switch">Ainda não tem conta? <button id="show-signup" class="auth-link" type="button">Criar conta</button></p>
@@ -26,6 +27,13 @@
 <button class="primary" type="submit">Criar conta</button>
 </form>
 <p class="auth-switch">Já tem conta? <button id="show-login" class="auth-link" type="button">Entrar</button></p>
+</div>
+<div id="recover-screen" hidden>
+<h1>Esqueceu sua senha?</h1>
+<p>Informe seu e-mail para receber um link e criar uma nova senha.</p>
+<form id="recover-form"><label>E-mail<input id="recover-email" type="email" autocomplete="email" maxlength="254" required></label><button class="primary" type="submit">Enviar link de recuperação</button></form>
+<div id="recover-sent" hidden role="status"><h2>Confira seu e-mail</h2><p>Se houver uma conta com esse e-mail, você receberá um link para criar uma nova senha. Confira também o spam ou lixo eletrônico.</p></div>
+<button id="recover-back" class="auth-link" type="button">Voltar para entrar</button>
 </div>
 <form id="password-form" hidden><h1>Redefina sua senha</h1><label>Nova senha<input id="new-password" type="password" autocomplete="new-password" minlength="8" required></label><button class="primary">Salvar nova senha</button></form>
 <p id="auth-message" role="status" aria-live="polite"></p>

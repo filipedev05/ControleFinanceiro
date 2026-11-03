@@ -34,6 +34,7 @@ export function createCloud(config, request = fetch) {
       if (response.status === 401 && authenticated) { session = null; throw new Error('Sessão expirada. Entre novamente.'); }
       if (response.status === 429) throw new Error('Muitas tentativas. Aguarde alguns minutos.');
       if (path.includes('/auth/')) {
+        if (result?.error_code === 'invalid_credentials' && path.includes('grant_type=password')) throw Object.assign(new Error('E-mail ou senha incorretos.'), {code:'invalid_credentials'});
         if (result?.error_code === 'email_not_confirmed') throw new Error('Confirme seu e-mail antes de entrar.');
         throw new Error('Não foi possível concluir. Confira e-mail, senha e confirmação de e-mail.');
       }

@@ -2,6 +2,16 @@ import {categories, entryCategories, validateEntry, summarize, parseAmount, cate
 const $ = id => document.getElementById(id);
 import {createCloud} from './cloud.js';
 import {supabaseConfig} from './config.js';
+import {createLoginLimit} from './login-limit.js';
+let limitStorage;
+try { limitStorage = localStorage; } catch { limitStorage = null; }
+const loginLimit = createLoginLimit(limitStorage);
+function updateLoginLimit() {
+  const state = loginLimit.status();
+  $('login-submit').disabled = busy || state.blocked;
+  $('login-limit-message').textContent = state.blocked ? `Três tentativas incorretas. Tente novamente em ${Math.ceil(state.remaining / 60000)} minuto(s) ou use “Esqueci a senha”.` : state.attempts ? `E-mail ou senha incorretos. Restam ${3-state.attempts} tentativa(s).` : '';
+}
+
 let cloud;
 let busy = false;
 let ready = false;
@@ -39,11 +49,12 @@ function showAuthScreen(screen, focus = true) {
   $('login-screen').hidden = screen !== 'login';
   $('signup-screen').hidden = screen !== 'signup';
   $('password-form').hidden = screen !== 'recovery';
+  $('recover-screen').hidden = screen !== 'recover';
   $('password').value = '';
   $('signup-password').value = '';
   authMessage('');
   cloudMessage('');
-  if (focus) $(screen === 'signup' ? 'signup-email' : screen === 'recovery' ? 'new-password' : 'email').focus();
+  if (focus) $(screen === 'signup' ? 'signup-email' : screen === 'recovery' ? 'new-password' : screen === 'recover' ? 'recover-email' : 'email').focus();
 }
 $('show-signup').onclick = () => showAuthScreen('signup');
 $('show-login').onclick = () => showAuthScreen('login');
@@ -74,7 +85,7 @@ async function action(task) {
     cloudMessage(error.message);
     authMessage(error.message);
     if (!cloud?.user) { resetEntryForm(); entries = []; ready = false; render(); showAccount(); }
-  } finally { busy = false; controls.forEach(c => c.disabled = false); }
+  } finally { busy = false; controls.forEach(c => c.disabled = false); updateLoginLimit(); }
 }
 function render() {
   const monthly = entries.filter(e => e.date.startsWith($('month').value));
@@ -241,7 +252,15 @@ $('import').onchange = event => {
 const redirect = supabaseConfig.authRedirectUrl;
 $('auth-form').onsubmit = event => {
   event.preventDefault();
-  action(async () => { await cloud.login($('email').value.trim(),$('password').value); $('password').value=''; showAccount(); await refresh(); });
+  action(async () => {
+    if (loginLimit.status().blocked) throw new Error('Limite de três tentativas atingido. Aguarde 15 minutos ou recupere sua senha.');
+    try { await cloud.login($('email').value.trim(),$('password').value); }
+    catch (error) {
+      if (error.code === 'invalid_credentials') { loginLimit.fail(); $('password').value=''; }
+      throw error;
+    }
+    loginLimit.reset(); $('password').value=''; showAccount(); await refresh();
+  });
 };
 $('signup-form').onsubmit = event => {
   event.preventDefault();
@@ -260,15 +279,30 @@ $('signup-form').onsubmit = event => {
   });
 };
 $('recover').onclick = () => {
-  if (!$('email').reportValidity() || !$('email').value) { authMessage('Informe seu e-mail para receber o link.'); return; }
-  action(async () => { await cloud.recover($('email').value.trim(),redirect); authMessage('Se houver uma conta com esse e-mail, você receberá um link de recuperação.'); });
+  $('recover-email').value = $('email').value.trim();
+  $('recover-form').hidden = false;
+  $('recover-sent').hidden = true;
+  showAuthScreen('recover');
+};
+$('recover-back').onclick = () => showAuthScreen('login');
+$('recover-form').onsubmit = event => {
+  event.preventDefault();
+  action(async () => {
+    await cloud.recover($('recover-email').value.trim(),redirect);
+    $('recover-form').hidden = true;
+    $('recover-sent').hidden = false;
+    authMessage('');
+  });
 };
 $('password-form').onsubmit = event => {
   event.preventDefault();
   action(async () => {
     await cloud.updatePassword($('new-password').value); $('new-password').value='';
+    loginLimit.reset();
+    await cloud.logout().catch(() => {});
     showAuthScreen('login', false);
-    showAccount(); await refresh();
+    showAccount();
+    authMessage('Senha atualizada! Entre com sua nova senha.');
   });
 };
 $('logout').onclick = () => action(async () => {
@@ -276,6 +310,9 @@ $('logout').onclick = () => action(async () => {
   finally { resetEntryForm(); entries=[]; ready=false; render(); showAuthScreen('login'); showAccount(); notify(''); cloudMessage('Você saiu. Entre novamente para acessar os dados.'); }
 });
 $('reload').onclick = () => action(refresh);
+setInterval(updateLoginLimit, 1000);
+window.addEventListener('storage', updateLoginLimit);
+updateLoginLimit();
 render();
 action(async () => {
   const hash=location.hash;

@@ -105,3 +105,11 @@ test('edição não informa sucesso para registro ausente ou erro de permissão'
   await assert.rejects(cloud.update({id:'missing'}),status===200?/não encontrado/:/Não foi possível/);
  }
 });
+test('somente credenciais inválidas recebem código para contar erro de senha',async()=>{
+ for(const [code,status] of [['invalid_credentials',400],['email_not_confirmed',400],['over_request_rate_limit',429]]){
+  const cloud=createCloud(config,async()=>reply({error_code:code},status));
+  await assert.rejects(cloud.login('a','b'),error=>code==='invalid_credentials'?error.code==='invalid_credentials':error.code===undefined);
+ }
+ const cloud=createCloud(config,async()=>{throw new Error('network');});
+ await assert.rejects(cloud.login('a','b'),error=>error.code===undefined);
+});
