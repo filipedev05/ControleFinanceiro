@@ -1,8 +1,8 @@
 # Controle Financeiro
 
-Aplicação web para organizar receitas e despesas, acompanhar o saldo mensal e visualizar como o dinheiro é distribuído por categoria. O projeto tem interface em português e integra autenticação e armazenamento online com o Supabase.
+Aplicação web para organizar receitas e despesas, acompanhar o saldo mensal e visualizar como o dinheiro é distribuído por categoria. O projeto tem interface em português, contas individuais e armazenamento online.
 
-[Acessar a aplicação](https://filipedev05.github.io/ControleFinanceiro/) · [Configurar o Supabase](SUPABASE.md)
+[Acessar a aplicação](https://filipedev05.github.io/ControleFinanceiro/)
 
 ## Introdução
 
@@ -33,7 +33,7 @@ Os objetivos específicos são:
 - Pausa do login por 15 minutos após três erros de credenciais no mesmo navegador.
 - Encerramento da sessão pelo botão **Sair**.
 
-O limite de tentativas é local ao navegador e pode ser contornado ao limpar os dados ou utilizar outro navegador. Ele não representa um bloqueio global da conta no Supabase.
+O limite de tentativas é local ao navegador e pode ser contornado ao limpar os dados ou utilizar outro navegador. Ele não representa um bloqueio global da conta.
 
 ### Movimentações
 
@@ -69,7 +69,7 @@ A exportação pelo usuário é complementar à rotina de backup e recuperação
 | CSS3 | Estilos e adaptação a diferentes tamanhos de tela |
 | JavaScript com módulos ES | Interface, validação e regras financeiras |
 | SVG | Gráficos de categorias e evolução mensal |
-| Supabase Auth | Cadastro, login, confirmação de e-mail e recuperação de senha |
+| [Supabase](SUPABASE.md) | Autenticação e armazenamento online |
 | PostgreSQL e Row Level Security (RLS) | Persistência e controle de acesso aos registros |
 | Node.js | Servidor local e execução dos testes |
 | GitHub Pages | Hospedagem estática da aplicação |
@@ -85,11 +85,11 @@ ControleFinanceiro/
 ├── app.js                       # Eventos, formulários e gráficos
 ├── finance.js                   # Categorias, validações e cálculos
 ├── cloud.js                     # Cliente REST de autenticação e registros
-├── config.js                    # Configuração pública do Supabase
+├── config.js                    # Configuração pública dos serviços
 ├── login-limit.js               # Contador local de tentativas de login
 ├── server.js                    # Servidor HTTP para desenvolvimento
 ├── package.json                 # Comandos do projeto
-├── SUPABASE.md                  # Guia de configuração e operação
+├── SUPABASE.md                  # Visão geral do Supabase no projeto
 ├── supabase/
 │   ├── schema.sql               # Estrutura e políticas do banco
 │   ├── enable-editing.sql       # Habilita edição em projetos existentes
@@ -102,7 +102,7 @@ ControleFinanceiro/
 ### Pré-requisitos
 
 - Node.js 22 ou superior, com npm.
-- Projeto Supabase com autenticação e banco configurados.
+- Serviços de autenticação e banco de dados previamente configurados.
 - Navegador atualizado.
 - Git, caso queira clonar o repositório; também é possível baixar o ZIP pelo GitHub.
 
@@ -112,26 +112,6 @@ ControleFinanceiro/
 git clone https://github.com/filipedev05/ControleFinanceiro.git
 cd ControleFinanceiro
 ```
-
-### Preparar o Supabase
-
-Siga o passo a passo de [SUPABASE.md](SUPABASE.md) para criar a tabela, aplicar as políticas RLS e configurar os e-mails.
-
-Preencha `config.js` com a URL do seu projeto, sua chave pública e o endereço de retorno da autenticação:
-
-```js
-export const supabaseConfig = {
-  authRedirectUrl: 'https://SEU-SITE/',
-  url: 'https://SEU-PROJETO.supabase.co',
-  publishableKey: 'SUA_CHAVE_PUBLICA',
-};
-```
-
-Configure também **Site URL** e **Redirect URLs** em **Authentication → URL Configuration** no painel Supabase. O endereço público utilizado neste projeto é `https://filipedev05.github.io/ControleFinanceiro/`.
-
-Use somente a chave pública Publishable ou a chave `anon` legada. Não inclua senha do banco, chave `service_role` ou chave `sb_secret_` no código.
-
-Para atualizar um banco que já existia antes das funcionalidades de edição e novas categorias, consulte [enable-editing.sql](supabase/enable-editing.sql) e [expand-categories.sql](supabase/expand-categories.sql).
 
 ### Executar localmente
 
@@ -147,7 +127,7 @@ Se o PowerShell bloquear o arquivo `npm.ps1`, utilize:
 npm.cmd start
 ```
 
-A aplicação depende do Supabase para autenticar e salvar novos registros. O servidor Node.js serve os arquivos locais; ele não substitui o banco ou o serviço de autenticação.
+A aplicação depende dos serviços online configurados em `config.js` para autenticar e salvar novos registros. O servidor Node.js serve os arquivos locais; ele não substitui o banco ou o serviço de autenticação.
 
 ## Como utilizar
 
@@ -165,19 +145,19 @@ npm run check
 npm test
 ```
 
-A verificação de sintaxe analisa os arquivos JavaScript. Os testes automatizados cobrem cálculos financeiros, categorias, evolução mensal, limite local de login e chamadas ao Supabase com respostas simuladas.
+A verificação de sintaxe analisa os arquivos JavaScript. Os testes automatizados cobrem cálculos financeiros, categorias, evolução mensal, limite local de login e chamadas aos serviços online com respostas simuladas.
 
-O envio real de e-mails, as políticas RLS e a persistência entre contas e dispositivos precisam ser validados no projeto Supabase configurado. Consulte o roteiro em [SUPABASE.md](SUPABASE.md).
+O envio real de e-mails, as regras de acesso e a persistência entre contas e dispositivos também precisam ser validados no ambiente utilizado.
 
 ## Publicação
 
 A aplicação é compatível com hospedagem estática. Para usar GitHub Pages, configure **Settings → Pages → Deploy from a branch**, selecionando a branch `main` e a pasta `/ (root)`.
 
-Publique os arquivos da interface e todos os módulos JavaScript importados, incluindo `login-limit.js`. Ajuste a URL de retorno em `config.js` e os endereços de autenticação no Supabase quando mudar de domínio.
+Publique os arquivos da interface e todos os módulos JavaScript importados, incluindo `login-limit.js`. Ajuste a URL de retorno em `config.js` e os endereços do serviço de autenticação quando mudar de domínio.
 
 ## Armazenamento e limitações
 
-- Os registros financeiros ficam no Supabase e são vinculados ao usuário autenticado. A separação depende das políticas RLS corretamente aplicadas.
+- Os registros financeiros ficam no banco de dados online e são vinculados ao usuário autenticado. A separação depende das políticas RLS corretamente aplicadas.
 - A sessão permanece na memória da aba. Recarregar a página ou abrir outra aba exige novo login.
 - O contador de tentativas utiliza armazenamento local do navegador; ele não armazena senhas.
 - Não há sincronização em tempo real. O botão **Atualizar registros** busca as alterações feitas em outros dispositivos.
