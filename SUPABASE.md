@@ -16,7 +16,7 @@ A tabela `entries` usa Row Level Security (RLS). Usuários autenticados podem le
 Em **Authentication → URL Configuration**:
 
 - **Site URL**: `https://filipedev05.github.io/ControleFinanceiro/`
-- **Redirect URLs**: adicione exatamente `https://filipedev05.github.io/ControleFinanceiro/` e `http://localhost:3000/`.
+- **Redirect URLs**: adicione exatamente `https://filipedev05.github.io/ControleFinanceiro/` (incluindo a barra final). O cadastro e a recuperação usam esse endereço mesmo quando o site é aberto localmente.
 
 Se usar outra porta ou domínio, adicione a URL correspondente. Os links de confirmação e recuperação retornam ao site. Configure um provedor SMTP para uso público: o envio padrão do Supabase tem restrições e limites e pode não entregar a destinatários externos. Consulte **Authentication → Email / SMTP Settings** e a documentação do seu plano. Nunca coloque a senha SMTP no código do site.
 
@@ -74,3 +74,9 @@ Execute `supabase/enable-editing.sql` no SQL Editor do seu projeto. A política 
 ## Novas categorias
 
 Em projetos existentes, execute `supabase/expand-categories.sql` no SQL Editor para liberar as novas categorias. Não altera os lançamentos existentes. O formulário separa receitas e despesas; ao editar um lançamento antigo, sua categoria original continua disponível.
+
+## Confirmação de e-mail abrindo localhost
+
+Em **Authentication → URL Configuration**, defina **Site URL** como `https://filipedev05.github.io/ControleFinanceiro/` e inclua esse mesmo endereço em **Redirect URLs**. Salve as alterações. O código usa `authRedirectUrl` de `config.js` para o cadastro e a recuperação. Após confirmar o cadastro, a página mostra o login, sem abrir automaticamente os registros.
+
+Em **Authentication → Email Templates → Confirm signup**, se o modelo tiver sido personalizado, o link de confirmação deve usar `{{ .ConfirmationURL }}`. Um link fixo para localhost no modelo também precisa ser corrigido. Não substitua pelo endereço direto do site, pois isso não confirma a conta. Links já enviados podem conter o destino antigo; valide o fluxo com um novo e-mail de confirmação.

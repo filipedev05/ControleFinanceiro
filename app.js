@@ -238,7 +238,7 @@ $('import').onchange = event => {
     } finally { event.target.value=''; }
   });
 };
-const redirect = location.origin + location.pathname;
+const redirect = supabaseConfig.authRedirectUrl;
 $('auth-form').onsubmit = event => {
   event.preventDefault();
   action(async () => { await cloud.login($('email').value.trim(),$('password').value); $('password').value=''; showAccount(); await refresh(); });
@@ -288,6 +288,15 @@ action(async () => {
     if (new URLSearchParams(hash.slice(1)).get('type') === 'recovery') {
       showAuthScreen('recovery');
       authMessage('Escolha uma nova senha para sua conta.');
+      return;
+    }
+    if (new URLSearchParams(hash.slice(1)).get('type') === 'signup') {
+      // A confirmação valida o link, mas o usuário entra explicitamente pelo formulário.
+      // logout sempre descarta a sessão local, mesmo se o servidor estiver indisponível.
+      await cloud.logout().catch(() => {});
+      showAuthScreen('login', false);
+      showAccount();
+      authMessage('E-mail confirmado! Sua conta está ativa. Informe seu e-mail e senha para entrar.');
       return;
     }
     showAccount(); await refresh();
