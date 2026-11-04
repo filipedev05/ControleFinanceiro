@@ -1,5 +1,6 @@
 import {categories, entryCategories, validateEntry, summarize, parseAmount, categoryTotals, monthlyEvolution} from './finance.js';
 const $ = id => document.getElementById(id);
+import {validateGoal, goalProgress} from './goals.js';
 import {createCloud} from './cloud.js';
 import {supabaseConfig} from './config.js';
 import {createLoginLimit} from './login-limit.js';
@@ -16,6 +17,9 @@ let cloud;
 let busy = false;
 let ready = false;
 let entries = [];
+let goals = [];
+let goalsReady = false;
+let editingGoalId = null;
 let editingId = null;
 let chartType = 'expense';
 const money = value => (value / 100).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
@@ -73,6 +77,7 @@ async function refresh() {
   ready = true;
   render();
   cloudMessage('Registros atualizados. Alterações são salvas na sua conta online.');
+  await refreshGoals();
 }
 async function action(task) {
   if (busy) return;
@@ -84,7 +89,7 @@ async function action(task) {
   catch (error) {
     cloudMessage(error.message);
     authMessage(error.message);
-    if (!cloud?.user) { resetEntryForm(); entries = []; ready = false; render(); showAccount(); }
+    if (!cloud?.user) { resetGoalForm(); goals=[]; goalsReady=false; $('goals-status').textContent=''; resetEntryForm(); entries = []; ready = false; render(); showAccount(); }
   } finally { busy = false; controls.forEach(c => c.disabled = false); updateLoginLimit(); }
 }
 function render() {
@@ -123,6 +128,7 @@ function render() {
     row.append(info,amount,edit,remove); $('entries').append(row);
   }
   renderCharts(monthly);
+  renderGoals();
 }
 function resetEntryForm() {
   editingId = null;
@@ -307,8 +313,111 @@ $('password-form').onsubmit = event => {
 };
 $('logout').onclick = () => action(async () => {
   try { await cloud.logout(); }
-  finally { resetEntryForm(); entries=[]; ready=false; render(); showAuthScreen('login'); showAccount(); notify(''); cloudMessage('Você saiu. Entre novamente para acessar os dados.'); }
+  finally { resetGoalForm(); goals=[]; goalsReady=false; $('goals-status').textContent=''; resetEntryForm(); entries=[]; ready=false; render(); showAuthScreen('login'); showAccount(); notify(''); cloudMessage('Você saiu. Entre novamente para acessar os dados.'); }
 });
+function goalMessage(text) { $('goal-message').textContent = text; }
+function syncGoalForm() {
+  const form=$('goal-form');
+  const saving=form.elements.kind.value==='saving';
+  $('goal-spending-fields').hidden=saving;
+  $('goal-saving-fields').hidden=!saving;
+  $('goal-end-label').hidden=!saving;
+  form.elements.end_month.required=saving;
+  form.elements.saved.required=saving;
+  if (!saving) form.elements.end_month.value=form.elements.start_month.value;
+}
+function resetGoalForm() {
+  editingGoalId=null;
+  $('goal-form').reset();
+  $('goal-form').elements.start_month.value=$('month').value || localDate.slice(0,7);
+  $('goal-form').elements.end_month.value=$('goal-form').elements.start_month.value;
+  $('goal-form-title').textContent='Nova meta';
+  $('goal-save').textContent='Criar meta';
+  $('goal-cancel').hidden=true;
+  goalMessage(''); syncGoalForm();
+}
+function goalAction(task) {
+  return action(async () => {
+    goalMessage('');
+    try { if (!goalsReady) throw new Error('As metas ainda não foram carregadas. Clique em Atualizar registros e tente novamente.'); await task(); }
+    catch (error) { goalMessage(error.message); throw error; }
+  });
+}
+async function refreshGoals() {
+  goalsReady=false;
+  $('goals-status').textContent='Carregando metas…';
+  try {
+    goals=(await cloud.listGoals()).map(validateGoal);
+    goalsReady=true;
+    $('goals-status').textContent='Metas atualizadas.';
+  } catch (error) {
+    goals=[];
+    $('goals-status').textContent='Não foi possível carregar as metas. Verifique sua conexão e clique em Atualizar registros. Se o problema continuar, entre em contato com o responsável pela plataforma.';
+    if (!cloud?.user) throw error;
+  }
+  renderGoals();
+}
+function renderGoals() {
+  const list=$('goals-list'); list.replaceChildren();
+  if (!goals.length) {
+    const p=document.createElement('p');p.textContent=goalsReady?'Você ainda não tem metas. Crie seu primeiro objetivo.':'As metas ainda não estão disponíveis.';list.append(p);return;
+  }
+  const currentMonth=localDate.slice(0,7);
+  for (const goal of [...goals].sort((a,b)=>a.end_month.localeCompare(b.end_month))) {
+    const p=goalProgress(goal,entries,currentMonth);
+    const card=document.createElement('article');card.className='goal-card';
+    const title=document.createElement('h3');title.textContent=goal.title;
+    const dates=document.createElement('p');dates.className='muted';dates.textContent=`${goal.kind==='saving'?'Juntar dinheiro':'Limite de gastos'} · ${goal.start_month.split('-').reverse().join('/')} a ${goal.end_month.split('-').reverse().join('/')}`;
+    const amount=document.createElement('strong');amount.textContent=`${money(p.current)} de ${money(goal.target_amount)} ${goal.kind==='saving'?'reservados':'gastos'}`;
+    const progress=document.createElement('progress');progress.max=100;progress.value=p.percent;progress.setAttribute('aria-label',`${goal.title}: ${p.percent.toFixed(1)}%`);
+    const status=document.createElement('p');
+    if (goal.kind==='spending') {
+      status.textContent=p.exceeded?`Limite ultrapassado em ${money(p.exceeded)}.`:p.current===goal.target_amount?'Limite de gastos atingido.':`${p.ended?'Restaram':'Disponível no limite'}: ${money(p.remaining)}.`;
+      if (p.exceeded) status.className='negative';
+    } else {
+      status.textContent=p.remaining===0?'Meta atingida!':p.ended?`Prazo encerrado. Ainda faltam ${money(p.remaining)}.`:`Faltam ${money(p.remaining)}. Sugestão: ${money(p.monthly)} por mês em ${p.months} mês(es).`;
+      if (!p.remaining) status.className='positive';
+    }
+    if (p.upcoming) status.textContent+=' Período ainda não iniciado.';
+    if (p.ended && goal.kind==='spending') status.textContent+=' Período encerrado.';
+    card.append(title,dates,amount,progress,status);
+    if (goal.kind==='spending') {const filters=document.createElement('p');filters.className='muted';filters.textContent=`Categoria: ${goal.category||'Todas'}${goal.description_filter?` · Descrição contém: ${goal.description_filter}`:''}`;card.append(filters);}
+    const actions=document.createElement('div');actions.className='goal-actions';
+    const edit=document.createElement('button');edit.type='button';edit.textContent=goal.kind==='saving'?'Editar / atualizar valor reservado':'Editar';edit.setAttribute('aria-label',`Editar meta ${goal.title}`);
+    edit.onclick=()=>{
+      if(busy)return;
+      editingGoalId=goal.id;
+      const form=$('goal-form');
+      for(const field of ['title','kind','start_month','end_month','category','description_filter']) form.elements[field].value=goal[field];
+      form.elements.target.value=(goal.target_amount/100).toFixed(2).replace('.',',');
+      form.elements.saved.value=(goal.saved_amount/100).toFixed(2).replace('.',',');
+      $('goal-form-title').textContent='Editar meta';$('goal-save').textContent='Salvar meta';$('goal-cancel').hidden=false;
+      goalMessage('');syncGoalForm();form.scrollIntoView({behavior:'smooth',block:'center'});form.elements.title.focus({preventScroll:true});
+    };
+    const remove=document.createElement('button');remove.type='button';remove.textContent='Excluir';remove.setAttribute('aria-label',`Excluir meta ${goal.title}`);
+    remove.onclick=()=>{if(!busy && confirm(`Excluir a meta “${goal.title}”? Seus lançamentos serão mantidos.`))goalAction(async()=>{await cloud.removeGoal(goal.id);goals=goals.filter(g=>g.id!==goal.id);if(editingGoalId===goal.id)resetGoalForm();renderGoals();goalMessage('Meta excluída.');});};
+    actions.append(edit,remove);card.append(actions);list.append(card);
+  }
+}
+$('goal-form').elements.kind.onchange=syncGoalForm;
+$('goal-form').elements.start_month.onchange=syncGoalForm;
+$('goal-cancel').onclick=resetGoalForm;
+for(const category of categories) $('goal-category').add(new Option(category,category));
+resetGoalForm();
+$('goal-form').onsubmit=event=>{
+  event.preventDefault();
+  goalAction(async()=>{
+    const f=$('goal-form');
+    const saving=f.elements.kind.value==='saving';
+    const saved=f.elements.saved.value.trim();
+    const goal=validateGoal({id:editingGoalId||crypto.randomUUID(),title:f.elements.title.value,kind:f.elements.kind.value,target_amount:parseAmount(f.elements.target.value),saved_amount:saving?parseAmount(saved):0,start_month:f.elements.start_month.value,end_month:saving?f.elements.end_month.value:f.elements.start_month.value,category:saving?'':f.elements.category.value,description_filter:saving?'':f.elements.description_filter.value});
+    const updated=validateGoal(await cloud.saveGoal(goal,Boolean(editingGoalId)));
+    goals=goals.filter(g=>g.id!==updated.id);goals.push(updated);
+    resetGoalForm();renderGoals();goalMessage('Meta salva na sua conta.');
+  });
+};
+$('goals-export').onclick=()=>goalAction(async()=>{await refreshGoals();if(!goalsReady)throw new Error('Não foi possível atualizar as metas para exportar.');download(JSON.stringify(goals,null,2),`controle-financeiro-metas-${localDate}.json`);});
+
 $('reload').onclick = () => action(refresh);
 setInterval(updateLoginLimit, 1000);
 window.addEventListener('storage', updateLoginLimit);

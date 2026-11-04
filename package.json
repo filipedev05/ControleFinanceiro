@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test --test-isolation=none",
-    "check": "node --check app.js && node --check login-limit.js && node --check finance.js && node --check cloud.js && node --check config.js && node --check server.js"
+    "check": "node --check app.js && node --check goals.js && node --check login-limit.js && node --check finance.js && node --check cloud.js && node --check config.js && node --check server.js"
   },
   "engines": {
     "node": ">=22"

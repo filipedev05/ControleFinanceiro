@@ -53,6 +53,16 @@ Entre as categorias disponíveis estão Alimentação, Moradia, Combustível, Ed
 - Evolução das receitas e despesas nos últimos 12 meses até o mês selecionado.
 - Tabela de valores mensais para complementar a visualização do gráfico.
 
+### Metas financeiras
+
+- Limite mensal de gastos, com categoria e filtro de descrição opcionais (por exemplo, iFood).
+- Progresso automático conforme as despesas cadastradas, com aviso de limite atingido ou ultrapassado.
+- Metas para juntar dinheiro em um mês ou ao longo de vários meses.
+- Total reservado informado pelo usuário, com cálculo do valor restante e sugestão mensal.
+- Edição, exclusão e exportação das metas, sem alterar os lançamentos.
+
+Metas de economia registram quanto a pessoa informa ter reservado; não movimentam dinheiro nem usam automaticamente o saldo da conta. O total reservado pode ser atualizado na edição da meta. As metas ficam disponíveis após a criação da tabela com [supabase/goals.sql](supabase/goals.sql).
+
 ### Backups
 
 - Exportação dos registros da conta em JSON.
@@ -83,6 +93,7 @@ ControleFinanceiro/
 ├── index.html                   # Interface da aplicação
 ├── style.css                    # Estilos e responsividade
 ├── app.js                       # Eventos, formulários e gráficos
+├── goals.js                     # Validação e acompanhamento das metas
 ├── finance.js                   # Categorias, validações e cálculos
 ├── cloud.js                     # Cliente REST de autenticação e registros
 ├── config.js                    # Configuração pública dos serviços
@@ -93,6 +104,7 @@ ControleFinanceiro/
 ├── supabase/
 │   ├── schema.sql               # Estrutura e políticas do banco
 │   ├── enable-editing.sql       # Habilita edição em projetos existentes
+│   ├── goals.sql                # Metas e políticas de acesso por usuário
 │   └── expand-categories.sql    # Libera novas categorias no banco
 └── test/                        # Testes das regras e integração simulada
 ```

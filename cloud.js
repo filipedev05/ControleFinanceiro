@@ -49,6 +49,7 @@ export function createCloud(config, request = fetch) {
   }
   function requireUser() { if (!session) throw new Error('Entre na sua conta para continuar.'); return session.user.id; }
   function fields(e) { return {id:e.id,description:e.description,type:e.type,amount:e.amount,category:e.category,date:e.date}; }
+  function goalFields(g) { return {title:g.title,kind:g.kind,target_amount:g.target_amount,saved_amount:g.saved_amount,start_month:g.start_month,end_month:g.end_month,category:g.category,description_filter:g.description_filter}; }
   return {
     get user() { return session?.user || null; },
     async login(email,password) { return setSession(await call('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}})); },
@@ -71,6 +72,28 @@ export function createCloud(config, request = fetch) {
     async logout() {
       try { if (session) await call('/auth/v1/logout',{method:'POST',authenticated:true}); }
       finally { session = null; }
+    },
+    async listGoals() {
+      const user = requireUser();
+      const all = [];
+      for (let offset=0;;offset+=500) {
+        const batch = await call(`/rest/v1/goals?select=id,title,kind,target_amount,saved_amount,start_month,end_month,category,description_filter&user_id=eq.${encodeURIComponent(user)}&order=end_month.asc,id.asc&limit=500&offset=${offset}`,{authenticated:true});
+        if (!Array.isArray(batch)) throw new Error('Resposta inválida das metas.');
+        all.push(...batch);
+        if (batch.length < 500) return all;
+      }
+    },
+    async saveGoal(goal, editing = false) {
+      const user = requireUser();
+      const path = editing ? `/rest/v1/goals?id=eq.${encodeURIComponent(goal.id)}&user_id=eq.${encodeURIComponent(user)}` : '/rest/v1/goals';
+      const data = await call(path,{method:editing?'PATCH':'POST',authenticated:true,headers:{Prefer:'return=representation'},body:editing?goalFields(goal):{...goalFields(goal),id:goal.id,user_id:user}});
+      if (!Array.isArray(data) || data.length !== 1) throw new Error('Meta não encontrada. Atualize os registros.');
+      return data[0];
+    },
+    async removeGoal(id) {
+      const user = requireUser();
+      const data = await call(`/rest/v1/goals?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user)}`,{method:'DELETE',authenticated:true,headers:{Prefer:'return=representation'}});
+      if (!data?.length) throw new Error('Meta não encontrada. Atualize os registros.');
     },
     async list() {
       const user = requireUser();

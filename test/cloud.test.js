@@ -113,3 +113,34 @@ test('somente credenciais inválidas recebem código para contar erro de senha',
  const cloud=createCloud(config,async()=>{throw new Error('network');});
  await assert.rejects(cloud.login('a','b'),error=>error.code===undefined);
 });
+test('metas exigem sessão e ignoram proprietário enviado pelo cliente',async()=>{
+ const calls=[];
+ const goal={id:'goal-1',title:'Viagem',kind:'saving',target_amount:100000,saved_amount:20000,start_month:'2026-11',end_month:'2027-06',category:'',description_filter:'',user_id:'user-b'};
+ const cloud=createCloud(config,async(url,options)=>{calls.push({url,options});return reply(url.includes('/token')?session:[goal]);});
+ await assert.rejects(cloud.listGoals(),/Entre/);
+ await assert.rejects(cloud.saveGoal(goal),/Entre/);
+ await assert.rejects(cloud.removeGoal(goal.id),/Entre/);
+ await cloud.login('a','b');await cloud.saveGoal(goal);
+ assert.equal(JSON.parse(calls[1].options.body).user_id,'user-a');
+ await cloud.saveGoal(goal,true);
+ const patch=calls[2];assert.equal(patch.options.method,'PATCH');assert.ok(patch.url.includes('id=eq.goal-1&user_id=eq.user-a'));
+ assert.equal(JSON.parse(patch.options.body).user_id,undefined);
+ assert.equal(JSON.parse(patch.options.body).id,undefined);
+ await cloud.listGoals();assert.ok(calls[3].url.includes('user_id=eq.user-a'));
+ await cloud.removeGoal(goal.id);assert.ok(calls[4].url.includes('user_id=eq.user-a'));assert.equal(calls[4].options.method,'DELETE');
+});
+test('metas não simulam sucesso ao receber retorno vazio ou falha',async()=>{
+ const cloud=createCloud(config,async url=>reply(url.includes('/token')?session:[]));
+ await cloud.login('a','b');
+ await assert.rejects(cloud.saveGoal({id:'missing'},true),/não encontrada/);
+ await assert.rejects(cloud.removeGoal('missing'),/não encontrada/);
+});
+test('paginação de metas lê lotes completos',async()=>{
+ let pages=0;
+ const cloud=createCloud(config,async url=>{
+  if(url.includes('/token'))return reply(session);
+  assert.ok(url.includes(`offset=${pages*500}`));
+  return reply(pages++===0?Array.from({length:500},(_,i)=>({id:i})):[]);
+ });
+ await cloud.login('a','b');assert.equal((await cloud.listGoals()).length,500);assert.equal(pages,2);
+});
