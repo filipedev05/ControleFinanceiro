@@ -22,3 +22,12 @@ export function goalProgress(goal, entries, currentMonth) {
   const months = Math.max(0,monthIndex(goal.end_month)-monthIndex(currentMonth > goal.start_month ? currentMonth : goal.start_month)+1);
   return {current,remaining,exceeded:Math.max(0,current-goal.target_amount),percent:Math.min(100,current/goal.target_amount*100),months,monthly:months?Math.ceil(remaining/months):0,upcoming:currentMonth<goal.start_month,ended:currentMonth>goal.end_month};
 }
+
+export function spendingAlerts(goals, entries, month) {
+  return goals.filter(g => g.kind === 'spending' && g.start_month === month).flatMap(goal => {
+    const progress = goalProgress(goal, entries, month);
+    const ratio = progress.current / goal.target_amount;
+    if (ratio < 0.8) return [];
+    return [{id:goal.id,title:goal.title,level:ratio>1?'exceeded':ratio===1?'reached':'near',usedPercent:ratio*100,...progress}];
+  }).sort((a,b) => b.usedPercent-a.usedPercent);
+}

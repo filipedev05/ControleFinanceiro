@@ -56,7 +56,8 @@ Entre as categorias disponíveis estão Alimentação, Moradia, Combustível, Ed
 ### Metas financeiras
 
 - Limite mensal de gastos, com categoria e filtro de descrição opcionais (por exemplo, iFood).
-- Progresso automático conforme as despesas cadastradas, com aviso de limite atingido ou ultrapassado.
+- Progresso automático conforme as despesas cadastradas, com avisos ao chegar a 80%, atingir ou ultrapassar o teto.
+- Avisos no painel para os tetos do mês atual, atualizados ao carregar e alterar os registros. São avisos dentro da aplicação, sem envio de notificações com o site fechado.
 - Metas para juntar dinheiro em um mês ou ao longo de vários meses.
 - Total reservado informado pelo usuário, com cálculo do valor restante e sugestão mensal.
 - Edição, exclusão e exportação das metas, sem alterar os lançamentos.

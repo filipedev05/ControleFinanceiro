@@ -39,3 +39,23 @@ test('meta concluída limita a barra em 100% e zera sugestão',()=>{
 test('metas rejeitam períodos e valores inválidos',()=>{
  for(const changes of [{target_amount:0},{target_amount:1.5},{saved_amount:-1},{start_month:'2026-13'},{end_month:'2026-10'},{end_month:'2027-01'},{title:' '},{description_filter:'x'.repeat(121)},{category:'desconhecida'},{start_month:'0000-01'}]) assert.throws(()=>validateGoal({...spending,...changes}));
 });
+test('avisos do teto distinguem 80%, limite exato e excesso em centavos',async()=>{
+ const {spendingAlerts}=await import('../goals.js');
+ const g=validateGoal({...spending,target_amount:10000,category:'',description_filter:''});
+ const alert=amount=>spendingAlerts([g],[{...entry,amount}],'2026-11');
+ assert.deepEqual(alert(7999),[]);
+ assert.equal(alert(8000)[0].level,'near');assert.equal(alert(8000)[0].remaining,2000);
+ assert.equal(alert(9999)[0].level,'near');
+ assert.equal(alert(10000)[0].level,'reached');
+ assert.equal(alert(10001)[0].level,'exceeded');assert.equal(alert(10001)[0].exceeded,1);
+ assert.deepEqual(alert(1000),[]);
+});
+test('avisos incluem apenas gastos do mês atual e respeitam filtros de cada meta',async()=>{
+ const {spendingAlerts}=await import('../goals.js');
+ const g=validateGoal({...spending,target_amount:5000});
+ const savings=validateGoal({...spending,id:'saving',kind:'saving',saved_amount:30000});
+ const old=validateGoal({...spending,id:'old',start_month:'2026-10',end_month:'2026-10'});
+ assert.deepEqual(spendingAlerts([g,savings,old],[{...entry,category:'Moradia'}],'2026-11'),[]);
+ assert.equal(spendingAlerts([g,savings,old],[entry],'2026-11').length,1);
+ assert.deepEqual(spendingAlerts([g],[entry],'2026-12'),[]);
+});

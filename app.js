@@ -1,6 +1,6 @@
 import {categories, entryCategories, validateEntry, summarize, parseAmount, categoryTotals, monthlyEvolution} from './finance.js';
 const $ = id => document.getElementById(id);
-import {validateGoal, goalProgress} from './goals.js';
+import {validateGoal, goalProgress, spendingAlerts} from './goals.js';
 import {createCloud} from './cloud.js';
 import {supabaseConfig} from './config.js';
 import {createLoginLimit} from './login-limit.js';
@@ -357,7 +357,27 @@ async function refreshGoals() {
   }
   renderGoals();
 }
+function renderBudgetAlerts() {
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const alerts = goalsReady ? spendingAlerts(goals, entries, month) : [];
+  const host = $('budget-alerts');
+  const signature = JSON.stringify(alerts);
+  if (host.dataset.signature === signature) return;
+  host.dataset.signature = signature;
+  host.replaceChildren();host.hidden = alerts.length === 0;
+  if (!alerts.length) return;
+  const heading=document.createElement('h2');heading.textContent='Atenção ao teto de gastos deste mês';host.append(heading);
+  for (const alert of alerts) {
+    const message=document.createElement('p');message.className=`budget-alert ${alert.level}`;
+    const title=document.createElement('strong');title.textContent=`${alert.title}: `;
+    const text=alert.level==='exceeded'?`teto ultrapassado em ${money(alert.exceeded)}. Você gastou ${money(alert.current)}.`:alert.level==='reached'?`teto atingido. Você já gastou os ${money(alert.current)} previstos.`:`você já usou ${alert.usedPercent.toLocaleString('pt-BR',{maximumFractionDigits:1})}% do teto. Restam ${money(alert.remaining)} para gastar.`;
+    message.append(title,document.createTextNode(text));host.append(message);
+  }
+  const link=document.createElement('a');link.href='#goals-title';link.textContent='Ver minhas metas';host.append(link);
+}
 function renderGoals() {
+  renderBudgetAlerts();
   const list=$('goals-list'); list.replaceChildren();
   if (!goals.length) {
     const p=document.createElement('p');p.textContent=goalsReady?'Você ainda não tem metas. Crie seu primeiro objetivo.':'As metas ainda não estão disponíveis.';list.append(p);return;
@@ -374,6 +394,11 @@ function renderGoals() {
     if (goal.kind==='spending') {
       status.textContent=p.exceeded?`Limite ultrapassado em ${money(p.exceeded)}.`:p.current===goal.target_amount?'Limite de gastos atingido.':`${p.ended?'Restaram':'Disponível no limite'}: ${money(p.remaining)}.`;
       if (p.exceeded) status.className='negative';
+      else if (p.current===goal.target_amount) status.className='negative';
+      else if (p.current>=goal.target_amount*0.8) {
+        status.textContent=`Atenção: você já usou ${(p.current/goal.target_amount*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}% do teto. Restam ${money(p.remaining)}.`;
+        status.className='budget-near';
+      }
     } else {
       status.textContent=p.remaining===0?'Meta atingida!':p.ended?`Prazo encerrado. Ainda faltam ${money(p.remaining)}.`:`Faltam ${money(p.remaining)}. Sugestão: ${money(p.monthly)} por mês em ${p.months} mês(es).`;
       if (!p.remaining) status.className='positive';
